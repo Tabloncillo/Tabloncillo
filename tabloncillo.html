@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0F0E0C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Tabloncillo — La app del baloncesto habanero. Marcadores, estadísticas y resultados de la Liga de La Habana.">
+<title>Tabloncillo — Baloncesto Habanero</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiVGFibG9uY2lsbG8iLCJzaG9ydF9uYW1lIjoiVGFibG9uY2lsbG8iLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBGMEUwQyIsInRoZW1lX2NvbG9yIjoiI0ZGNkIzNSIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBeE9USWdNVGt5SWo0OFkybHlZMnhsSUdONFBTSTVOaUlnWTNrOUlqazJJaUJ5UFNJNUlpQm1hV3hzUFNJalJrWTJRak0xSWk4K1BHTnBjbU5zWlNCallUMGlPVFlpSUdONVBTSTVOaUlnY2owaU5EQWlJR1pwYkd3OUlpTXdSakJGTUVNaUx6NDhkR1Y0ZENCNFBTSTVOAULNZVQWAU1UQTRJaUJ5UFNJMElpQm1hV3hzUFNJalJrWkdJaUJtYjI1MExYTnBlbVU5SWpJd0lpQjBaWGgwTFdGdVkyaHZjajBpYldsa1pHeGxJaUJtYjI1MExYZGxhV2RvZEQwaVltOXNaQ0krOE9LQXBUQXU8L3RleHQ+PC9zdmc+Iiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifV19">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F0E0C;color:#fff;font-family:'Barlow Condensed',-apple-system,sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+input::placeholder{color:#555}select{appearance:none}option{background:#1a1917;color:#fff}
+.card{background:#1A1917;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden}
+.card-p{padding:14px 16px}
+.badge{display:flex;align-items:center;justify-content:center;font-weight:900;letter-spacing:.5px;flex-shrink:0}
+.btn{border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px}
+.btn-accent{background:#FF6B35;color:#fff}.btn-ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#888}
+.inp{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;font-family:inherit;outline:none;width:100%}
+.sm-inp{width:46px;text-align:center;padding:6px 3px}
+.tab-active{color:#fff!important}.tab-dot{width:4px;height:4px;border-radius:2px;background:#FF6B35;margin-top:1px}
+.offline-bar{background:#B5151D;padding:6px 16px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:1px}
+.share-btn{display:flex;align-items:center;gap:4px;background:#25D366;border:none;border-radius:8px;padding:5px 12px;color:#fff;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:1px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease}
+.install-banner{background:linear-gradient(135deg,#FF6B3522,#1A1917);border:1px solid #FF6B3544;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ═══════════════════════════════════════════════════════════
+// TABLONCILLO — STANDALONE PWA
+// Single HTML file · localStorage · Installable · Offline
+// ═══════════════════════════════════════════════════════════
+
+// Service Worker registration (inline)
+if('serviceWorker' in navigator){
+  const swCode=`self.addEventListener('install',e=>{self.skipWaiting()});self.addEventListener('activate',e=>{e.waitUntil(clients.claim())});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response('Offline',{status:503}))))})`;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+const TEAMS=[
+  {id:"PLY",name:"Tiburones",zone:"Playa",c:"#0077B6",a:"#90E0EF"},
+  {id:"CRO",name:"Cimarrones",zone:"Cerro",c:"#B5151D",a:"#FFD166"},
+  {id:"D10",name:"Huracanes",zone:"Diez de Octubre",c:"#FF6B00",a:"#FFF"},
+  {id:"CTH",name:"Gladiadores",zone:"Centro Habana",c:"#6A0572",a:"#F49FBC"},
+  {id:"HVJ",name:"Corsarios",zone:"Habana Vieja",c:"#1B4332",a:"#D4A373"},
+  {id:"MRN",name:"Alacranes",zone:"Marianao",c:"#023E8A",a:"#48CAE4"},
+  {id:"LIS",name:"Panteras",zone:"La Lisa",c:"#212529",a:"#F8F9FA"},
+  {id:"REG",name:"Mambises",zone:"Regla",c:"#9B2226",a:"#EE9B00"},
+  {id:"GBK",name:"Gallos",zone:"Guanabacoa",c:"#2D6A4F",a:"#95D5B2"},
+  {id:"BOY",name:"Águilas",zone:"Boyeros",c:"#3C096C",a:"#E0AAFF"},
+  {id:"ARN",name:"Caribes",zone:"Arroyo Naranjo",c:"#774936",a:"#FFB703"},
+  {id:"COT",name:"Caimanes",zone:"Cotorro",c:"#006D77",a:"#83C5BE"},
+  {id:"SMP",name:"Dragones",zone:"San Miguel",c:"#D62828",a:"#F77F00"},
+  {id:"PLZ",name:"Capitales",zone:"Plaza",c:"#1D3557",a:"#A8DADC"},
+];
+const gt=id=>TEAMS.find(t=>t.id===id)||TEAMS[0];
+const AC="#FF6B35",GD="#F0B429",GN="#2ECC71",PIN="1976";
+
+// localStorage helpers
+const DB={
+  getAll(prefix){const items=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith(prefix)){try{items.push(JSON.parse(localStorage.getItem(k)))}catch{}}}return items},
+  set(k,v){localStorage.setItem(k,JSON.stringify(v))},
+  get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
+  del(k){localStorage.removeItem(k)},
+};
+
+const LSB=[{y:"2023",ch:"Santiago de Cuba"},{y:"2022",ch:"Ciego de Ávila"},{y:"2019",ch:"Guantánamo"},{y:"2018",ch:"Pinar del Río"},{y:"2017",ch:"Capitalinos"},{y:"2016",ch:"Ciego de Ávila"},{y:"2015",ch:"Capitalinos"},{y:"2013",ch:"Guantánamo"},{y:"2012",ch:"Ciego de Ávila"},{y:"2010",ch:"Capitalinos"},{y:"2009",ch:"Capitalinos"},{y:"2008",ch:"Capitalinos"},{y:"2007",ch:"Ciego de Ávila"},{y:"2006",ch:"Ciego de Ávila"},{y:"2005",ch:"Ciego de Ávila"},{y:"2004",ch:"Ciego de Ávila"},{y:"2003",ch:"Ciego de Ávila"},{y:"2002",ch:"Ciego de Ávila"},{y:"2001",ch:"Ciego de Ávila"},{y:"2000",ch:"Santiago de Cuba"},{y:"1999",ch:"Santiago de Cuba"},{y:"1998",ch:"Santiago de Cuba"},{y:"1997",ch:"Ciego de Ávila"},{y:"1996",ch:"Ciego de Ávila"},{y:"1995",ch:"Ciudad de La Habana"},{y:"1994",ch:"Santiago de Cuba"},{y:"1993",ch:"Santiago de Cuba"}];
+const PROV=[{n:"Ciego de Ávila",t:10,c:"#FF8C00"},{n:"Santiago de Cuba",t:6,c:"#B5151D"},{n:"La Habana",t:5,c:"#1D3557"},{n:"Guantánamo",t:2,c:"#2D6A4F"},{n:"Pinar del Río",t:1,c:"#006D77"},{n:"Las Tunas",t:0,c:"#774936"},{n:"Camagüey",t:0,c:"#9B2226"},{n:"Artemisa",t:0,c:"#3C096C"}];
+const INTL=[{y:"1972",e:"Olímpicos Múnich",r:"🥉 Bronce",n:"Única medalla olímpica del Caribe"},{y:"1995",e:"Centrobasket",r:"🥇"},{y:"1997",e:"Centrobasket",r:"🥇"},{y:"1999",e:"Centrobasket",r:"🥇"},{y:"2024",e:"Clasif. AmeriCup",r:"🔥 Victoria sobre EE.UU.",n:"Histórica en La Habana"}];
+
+// ─── APP STATE ──────────────────────────────────────────
+let state={tab:"scores",games:[],schedule:[],isAdmin:false,expanded:null,teamPage:null,loaded:false,offline:!navigator.onLine};
+
+function init(){
+  state.games=DB.getAll("game_").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  state.schedule=DB.getAll("sched_");
+  if(!state.games.length)seedData();
+  state.loaded=true;
+  render();
+}
+
+function seedData(){
+  const mkP=(nm,num,tm,min,pts,reb,ast,stl,blk,fgm,fga)=>({nm,num,tm,min,pts,reb,ast,stl,blk,fgm,fga});
+  const g1={id:"game_s1",home:"CRO",away:"PLY",hs:78,as:85,dt:"2026-02-21",loc:"Sala Ramón Fonst",createdAt:Date.now(),
+    ps:[mkP("Carlos M. Hernández","7","PLY",32,24,5,7,3,0,9,16),mkP("Yoandri Pérez","11","PLY",28,18,8,2,1,2,7,13),mkP("Luis A. Rodríguez","4","PLY",30,15,3,4,2,0,6,12),mkP("Roberto García","23","PLY",26,12,6,1,0,1,5,10),mkP("Daniel Soto","15","PLY",22,16,2,3,1,0,6,11),
+      mkP("Marcos Díaz","10","CRO",34,22,4,8,2,0,8,17),mkP("Alejandro Reyes","33","CRO",30,19,10,1,0,3,8,15),mkP("Ernesto Valdés","5","CRO",28,14,3,5,3,0,5,12),mkP("Jorge L. Martínez","8","CRO",24,13,5,2,1,1,5,11),mkP("René Álvarez","21","CRO",20,10,2,3,0,0,4,9)]};
+  const g2={id:"game_s2",home:"D10",away:"MRN",hs:92,as:88,dt:"2026-02-20",loc:"Ciudad Deportiva",createdAt:Date.now()-86400000,
+    ps:[mkP("Yordanis Durán","3","D10",36,28,7,5,1,1,11,20),mkP("Pedro A. Castillo","14","D10",30,20,4,6,2,0,8,15),mkP("Manuel Herrera","9","D10",28,16,8,2,0,2,7,13),mkP("Frank Domínguez","22","D10",24,14,3,3,1,0,5,11),mkP("Yoel Martínez","6","D10",22,14,5,1,0,1,6,10),
+      mkP("Raúl Vega","1","MRN",34,26,3,9,4,0,10,19),mkP("Dainier López","12","MRN",30,22,6,2,1,1,9,16),mkP("Osmany Ruiz","30","MRN",26,18,9,1,0,3,7,14),mkP("Lester Concepción","7","MRN",24,12,2,4,2,0,4,10),mkP("Yunior Páez","20","MRN",20,10,4,2,0,0,4,9)]};
+  const g3={id:"game_s3",home:"REG",away:"CTH",hs:76,as:81,dt:"2026-02-19",loc:"Regla",createdAt:Date.now()-172800000,
+    ps:[mkP("Adel Borroto","2","CTH",34,23,4,6,2,0,9,18),mkP("Yosvani Leal","14","CTH",30,19,7,3,1,1,7,14),mkP("Dario Puig","8","CTH",28,17,3,5,0,0,6,12),mkP("Pavel Noa","11","CTH",24,12,5,2,1,2,5,10),mkP("Felix Cuesta","25","CTH",20,10,2,1,0,0,4,9),
+      mkP("Osmani Torres","6","REG",32,21,6,4,1,1,8,16),mkP("Yariel Cárdenas","13","REG",28,18,8,2,0,2,7,14),mkP("Lázaro Mena","9","REG",26,15,4,3,2,0,6,13),mkP("Raunel Blanco","17","REG",22,12,3,5,1,0,5,11),mkP("Andy Pérez","24","REG",20,10,5,1,0,1,4,10)]};
+  [g1,g2,g3].forEach(g=>DB.set(g.id,g));
+  state.games=[g1,g2,g3];
+  const sc=[{id:"sched_s1",home:"PLY",away:"D10",dt:"2026-02-23",time:"4:00 PM",loc:"Sala Ramón Fonst",st:"sched"},{id:"sched_s2",home:"CTH",away:"REG",dt:"2026-02-23",time:"6:00 PM",loc:"Ciudad Deportiva",st:"sched"},{id:"sched_s3",home:"GBK",away:"ARN",dt:"2026-02-24",time:"5:00 PM",loc:"Guanabacoa",st:"sched"}];
+  sc.forEach(s=>DB.set(s.id,s));state.schedule=sc;
+}
+
+// ─── SHARE ──────────────────────────────────────────────
+async function shareGame(g){
+  const h=gt(g.home),a=gt(g.away);
+  let txt=`🏀 TABLONCILLO\n${a.name} (${a.zone}) ${g.as} — ${g.hs} ${h.name} (${h.zone})\n`;
+  if(g.ps?.length){const top=[...g.ps].sort((x,y)=>y.pts-x.pts).slice(0,3);txt+=`\n⭐ Líderes:\n`;top.forEach(p=>{txt+=`${p.nm} (${gt(p.tm).zone}) — ${p.pts}pts ${p.reb}reb ${p.ast}ast\n`})}
+  txt+=`\n📅 ${g.dt}${g.loc?" · "+g.loc:""}\n#BaloncestoHabanero #Tabloncillo`;
+  // Try canvas image
+  try{
+    const c=document.createElement("canvas");c.width=600;c.height=340;const x=c.getContext("2d");
+    const gr=x.createLinearGradient(0,0,600,340);gr.addColorStop(0,"#0F0E0C");gr.addColorStop(1,"#1A1917");x.fillStyle=gr;x.fillRect(0,0,600,340);
+    const bar=x.createLinearGradient(0,0,600,0);bar.addColorStop(0,a.c);bar.addColorStop(0.5,AC);bar.addColorStop(1,h.c);x.fillStyle=bar;x.fillRect(0,0,600,4);
+    x.fillStyle=AC;x.font="bold 14px sans-serif";x.textAlign="center";x.fillText("🏀 TABLONCILLO — BALONCESTO HABANERO",300,28);
+    x.fillStyle=a.c;x.beginPath();x.roundRect(30,48,100,90,10);x.fill();x.fillStyle=a.a;x.font="bold 28px sans-serif";x.textAlign="center";x.fillText(g.away,80,88);x.fillStyle="#fff";x.font="bold 12px sans-serif";x.fillText(a.name,80,108);x.fillStyle="#aaa";x.font="10px sans-serif";x.fillText(a.zone,80,122);
+    x.fillStyle=h.c;x.beginPath();x.roundRect(470,48,100,90,10);x.fill();x.fillStyle=h.a;x.font="bold 28px sans-serif";x.textAlign="center";x.fillText(g.home,520,88);x.fillStyle="#fff";x.font="bold 12px sans-serif";x.fillText(h.name,520,108);x.fillStyle="#aaa";x.font="10px sans-serif";x.fillText(h.zone,520,122);
+    const aw=g.as>g.hs,hw=g.hs>g.as;x.font="bold 56px sans-serif";x.fillStyle=aw?"#fff":"#555";x.fillText(String(g.as),250,105);x.fillStyle="#333";x.font="bold 24px sans-serif";x.fillText("—",300,100);x.font="bold 56px sans-serif";x.fillStyle=hw?"#fff":"#555";x.fillText(String(g.hs),350,105);
+    x.fillStyle=GN;x.font="bold 11px sans-serif";x.fillText("FINAL",300,130);
+    if(g.ps?.length){const top=[...g.ps].sort((a,b)=>b.pts-a.pts).slice(0,3);x.fillStyle="rgba(255,255,255,0.03)";x.beginPath();x.roundRect(30,155,540,110,8);x.fill();
+      x.fillStyle=GD;x.font="bold 11px sans-serif";x.textAlign="left";x.fillText("⭐ LÍDERES",46,175);
+      top.forEach((p,i)=>{const y=195+i*28;x.fillStyle="#ddd";x.font="bold 12px sans-serif";x.textAlign="left";x.fillText(p.nm,46,y);x.fillStyle=AC;x.fillText(`${p.pts}pts`,320,y);x.fillStyle="#b388ff";x.fillText(`${p.reb}reb`,380,y);x.fillStyle="#64ffda";x.fillText(`${p.ast}ast`,430,y);x.fillStyle="#888";x.font="10px sans-serif";x.fillText(gt(p.tm).zone,490,y)})}
+    x.fillStyle="#555";x.font="9px sans-serif";x.textAlign="center";x.fillText(`📅 ${g.dt}${g.loc?" · 📍 "+g.loc:""}`,300,300);x.fillStyle="#333";x.fillText("#BaloncestoHabanero #Tabloncillo",300,316);
+    const blob=await new Promise(r=>c.toBlob(r,"image/png"));const file=new File([blob],"tabloncillo.png",{type:"image/png"});
+    if(navigator.canShare?.({files:[file]}))return navigator.share({text:txt,files:[file]});
+  }catch{}
+  if(navigator.share)return navigator.share({text:txt});
+  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,"_blank");
+}
+
+// ─── RENDER ENGINE ──────────────────────────────────────
+function h(tag,attrs,...children){
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="style"&&typeof v==="object")Object.assign(el.style,v);
+    else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==="className")el.className=v;
+    else if(k==="innerHTML")el.innerHTML=v;
+    else el.setAttribute(k,v);
+  });
+  children.flat(9).forEach(c=>{if(c==null)return;el.appendChild(typeof c==="string"?document.createTextNode(c):c)});
+  return el;
+}
+
+function badge(id,sz=28){const t=gt(id);return h("div",{style:{width:sz+"px",height:sz+"px",borderRadius:(sz*.3)+"px",background:`linear-gradient(135deg,${t.c},${t.c}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:(sz*.3)+"px",fontWeight:"900",color:t.a,letterSpacing:"0.5px",flexShrink:"0"}},id)}
+
+function renderScores(){
+  const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"8px"}});
+  if(state.games.length)el.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"#fff",letterSpacing:"1px"}},"RESULTADOS"));
+  state.games.forEach(g=>{
+    const ht=gt(g.home),at=gt(g.away),hw=g.hs>g.as,aw=g.as>g.hs;
+    const top2=g.ps?[...g.ps].sort((x,y)=>y.pts-x.pts).slice(0,2):[];
+    const card=h("div",{className:"card fade-in",style:{padding:"12px 14px",cursor:"pointer",position:"relative",overflow:"hidden"},onClick:()=>{state.expanded=state.expanded===g.id?null:g.id;render()}},
+      h("div",{style:{position:"absolute",top:"0",left:"0",right:"0",height:"3px",background:`linear-gradient(90deg,${at.c},${AC},${ht.c})`}}),
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+        h("div",{style:{flex:"1"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"5px"}},badge(g.away,22),h("span",{style:{fontSize:"13px",fontWeight:aw?"800":"500",color:aw?"#fff":"#999",flex:"1"}},at.name+" ",h("span",{style:{color:"#555",fontSize:"10px",fontWeight:"400"}},at.zone)),h("span",{style:{fontSize:"18px",fontWeight:"900",color:aw?"#fff":"#555",fontVariantNumeric:"tabular-nums",width:"32px",textAlign:"right"}},String(g.as))),
+          h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},badge(g.home,22),h("span",{style:{fontSize:"13px",fontWeight:hw?"800":"500",color:hw?"#fff":"#999",flex:"1"}},ht.name+" ",h("span",{style:{color:"#555",fontSize:"10px",fontWeight:"400"}},ht.zone)),h("span",{style:{fontSize:"18px",fontWeight:"900",color:hw?"#fff":"#555",fontVariantNumeric:"tabular-nums",width:"32px",textAlign:"right"}},String(g.hs)))),
+        h("div",{style:{textAlign:"right",marginLeft:"12px",minWidth:"55px"}},h("div",{style:{fontSize:"9px",fontWeight:"700",color:GN,letterSpacing:"1px"}},"FINAL"),h("div",{style:{fontSize:"8px",color:"#444",marginTop:"2px"}},g.dt),g.loc?h("div",{style:{fontSize:"8px",color:"#333",marginTop:"1px"}},g.loc):null)),
+      top2.length?h("div",{style:{display:"flex",gap:"8px",marginTop:"8px",paddingTop:"8px",borderTop:"1px solid rgba(255,255,255,.04)"}},...top2.map(p=>h("div",{style:{display:"flex",alignItems:"center",gap:"4px",flex:"1"}},h("div",{style:{width:"6px",height:"6px",borderRadius:"3px",background:gt(p.tm).c,flexShrink:"0"}}),h("span",{style:{fontSize:"9px",color:"#888",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},p.nm),h("span",{style:{fontSize:"10px",fontWeight:"800",color:AC,marginLeft:"auto",flexShrink:"0"}},String(p.pts))))):null
+    );
+    el.appendChild(card);
+    // Expanded box score
+    if(state.expanded===g.id){
+      const box=h("div",{className:"card card-p fade-in",style:{marginTop:"-1px",borderTop:"none",borderTopLeftRadius:"0",borderTopRightRadius:"0"}});
+      box.appendChild(h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}},h("span",{style:{fontSize:"10px",color:"#555"}},"📍 "+(g.loc||"—")+" · "+g.dt),h("button",{className:"share-btn",onClick:e=>{e.stopPropagation();shareGame(g)}},"📤 COMPARTIR")));
+      [g.away,g.home].forEach(tm=>{
+        const t=gt(tm);const ps=(g.ps||[]).filter(p=>p.tm===tm).sort((a,b)=>b.pts-a.pts);if(!ps.length)return;
+        box.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px",marginTop:"10px"}},badge(tm,18),h("span",{style:{fontSize:"11px",fontWeight:"800",color:"#fff",letterSpacing:"1px"}},t.name+" — "+t.zone),h("span",{style:{marginLeft:"auto",fontSize:"12px",fontWeight:"900",color:AC}},String(ps.reduce((s,p)=>s+p.pts,0)))));
+        const tbl=h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:"10px"}});
+        const thead=h("tr");["","MIN","PTS","REB","AST","ROB","BLQ","TC%"].forEach((hd,i)=>thead.appendChild(h("th",{style:{padding:"4px 5px",textAlign:i?"center":"left",color:"#555",fontWeight:"700",fontSize:"8px",letterSpacing:"1px",borderBottom:"1px solid rgba(255,255,255,.04)"}},hd)));
+        tbl.appendChild(thead);
+        ps.forEach(p=>{const fg=p.fga>0?Math.round(p.fgm/p.fga*100):0;const tr=h("tr",{style:{borderBottom:"1px solid rgba(255,255,255,.02)"}},
+          h("td",{style:{padding:"5px",color:"#ddd",fontWeight:"600",whiteSpace:"nowrap"}},h("span",{style:{color:t.a,fontSize:"9px",marginRight:"4px"}},"#"+p.num),p.nm),
+          h("td",{style:{textAlign:"center",color:"#666"}},String(p.min)),
+          h("td",{style:{textAlign:"center",color:p.pts>=20?AC:p.pts>=10?"#fff":"#aaa",fontWeight:"700"}},String(p.pts)),
+          h("td",{style:{textAlign:"center",color:"#b388ff"}},String(p.reb)),
+          h("td",{style:{textAlign:"center",color:"#64ffda"}},String(p.ast)),
+          h("td",{style:{textAlign:"center",color:GD}},String(p.stl)),
+          h("td",{style:{textAlign:"center",color:"#ff6b6b"}},String(p.blk)),
+          h("td",{style:{textAlign:"center",color:fg>=50?GN:"#888"}},fg+"%"));tbl.appendChild(tr)});
+        const wrap=h("div",{style:{overflowX:"auto"}});wrap.appendChild(tbl);box.appendChild(wrap);
+      });
+      el.appendChild(box);
+    }
+  });
+  if(!state.games.length)el.appendChild(h("div",{style:{textAlign:"center",padding:"40px",color:"#555",fontSize:"12px"}},"No hay juegos aún"));
+  // Schedule
+  const upcoming=state.schedule.filter(s=>s.st==="sched");
+  if(upcoming.length){
+    el.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"#fff",letterSpacing:"1px",marginTop:"8px"}},"PRÓXIMOS"));
+    upcoming.forEach(s=>{const ht=gt(s.home),at=gt(s.away);
+      el.appendChild(h("div",{className:"card",style:{padding:"12px 14px",opacity:"0.7"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("div",{style:{flex:"1"}},
+            h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"5px"}},badge(s.away,22),h("span",{style:{fontSize:"13px",fontWeight:"500",color:"#999"}},at.name+" ",h("span",{style:{color:"#555",fontSize:"10px"}},at.zone))),
+            h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},badge(s.home,22),h("span",{style:{fontSize:"13px",fontWeight:"500",color:"#999"}},ht.name+" ",h("span",{style:{color:"#555",fontSize:"10px"}},ht.zone)))),
+          h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:"11px",fontWeight:"700",color:"#888"}},s.time||"TBD"),h("div",{style:{fontSize:"8px",color:"#444",marginTop:"2px"}},s.dt),s.loc?h("div",{style:{fontSize:"8px",color:"#333",marginTop:"1px"}},s.loc):null))));
+    });
+  }
+  return el;
+}
+
+function renderStandings(){
+  const rec={};TEAMS.forEach(t=>{rec[t.id]={w:0,l:0,pf:0,pa:0}});
+  state.games.forEach(g=>{const hw=g.hs>g.as;rec[g.home].w+=hw?1:0;rec[g.home].l+=hw?0:1;rec[g.home].pf+=g.hs;rec[g.home].pa+=g.as;rec[g.away].w+=hw?0:1;rec[g.away].l+=hw?1:0;rec[g.away].pf+=g.as;rec[g.away].pa+=g.hs});
+  const sorted=TEAMS.map(t=>({...t,...rec[t.id],pct:rec[t.id].w+rec[t.id].l>0?rec[t.id].w/(rec[t.id].w+rec[t.id].l):0})).sort((a,b)=>b.pct-a.pct||b.pf-a.pf);
+  const tbl=h("div",{className:"card"});
+  tbl.appendChild(h("div",{style:{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,.06)"}},h("span",{style:{fontSize:"13px",fontWeight:"900",color:"#fff",letterSpacing:"2px"}},"POSICIONES — LIGA HABANA")));
+  const table=h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:"11px"}});
+  const thead=h("tr");["#","","G","P","PCT","DIF"].forEach((hd,i)=>thead.appendChild(h("th",{style:{padding:"6px 8px",textAlign:i<2?"left":"center",color:"#555",fontWeight:"700",fontSize:"8px",letterSpacing:"1px",borderBottom:"1px solid rgba(255,255,255,.04)",width:i===0?"24px":"auto"}},hd)));
+  table.appendChild(thead);
+  sorted.forEach((t,i)=>{
+    const dif=t.pf-t.pa;
+    const tr=h("tr",{style:{borderBottom:"1px solid rgba(255,255,255,.02)",background:i<4?"rgba(255,107,53,.02)":"transparent",cursor:"pointer"},onClick:()=>{state.teamPage=t.id;state.tab="team";render()}},
+      h("td",{style:{padding:"7px 8px",color:i<4?AC:"#555",fontWeight:"900",fontSize:"11px"}},String(i+1)),
+      h("td",{style:{padding:"7px 8px"}},h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},badge(t.id,18),h("span",{style:{color:"#ddd",fontWeight:"600"}},t.name),h("span",{style:{color:"#555",fontSize:"9px"}},t.zone))),
+      h("td",{style:{textAlign:"center",color:GN,fontWeight:"700"}},String(t.w)),
+      h("td",{style:{textAlign:"center",color:"#888"}},String(t.l)),
+      h("td",{style:{textAlign:"center",color:"#aaa",fontWeight:"600"}},t.pct?t.pct.toFixed(3).slice(1):"—"),
+      h("td",{style:{textAlign:"center",color:dif>0?GN:dif<0?"#ff6b6b":"#555",fontWeight:"600"}},(dif>0?"+":"")+String(dif||"—")));
+    table.appendChild(tr);
+  });
+  tbl.appendChild(table);
+  tbl.appendChild(h("div",{style:{padding:"8px 16px",borderTop:"1px solid rgba(255,255,255,.04)",fontSize:"9px",color:"#555"}},h("span",{style:{color:AC}},"■")," Top 4 → Playoffs (mejor de 5)"));
+  return tbl;
+}
+
+function renderLeaders(){
+  const allP={};state.games.forEach(g=>{g.ps?.forEach(p=>{const k=`${p.nm}_${p.tm}`;if(!allP[k])allP[k]={nm:p.nm,tm:p.tm,num:p.num,gp:0,pts:0,reb:0,ast:0,stl:0,blk:0};allP[k].gp++;allP[k].pts+=p.pts;allP[k].reb+=p.reb;allP[k].ast+=p.ast;allP[k].stl+=p.stl;allP[k].blk+=p.blk})});
+  const all=Object.values(allP);if(!all.length)return h("div",{style:{textAlign:"center",padding:"40px",color:"#555"}},"Se necesitan más juegos");
+  const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"12px"}});
+  el.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"900",color:"#fff",letterSpacing:"2px"}},"📈 LÍDERES"));
+  [{k:"pts",l:"ANOTADORES",c:AC,ic:"🔥"},{k:"reb",l:"REBOTEADORES",c:"#b388ff",ic:"💪"},{k:"ast",l:"ASISTENTES",c:"#64ffda",ic:"🎯"},{k:"stl",l:"ROBOS",c:GD,ic:"👋"},{k:"blk",l:"BLOQUEOS",c:"#ff6b6b",ic:"🖐️"}].forEach(cat=>{
+    const sorted=[...all].sort((a,b)=>(b[cat.k]/b.gp)-(a[cat.k]/a.gp)).slice(0,5);
+    const sec=h("div",{className:"card"});
+    sec.appendChild(h("div",{style:{padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:"6px"}},h("span",null,cat.ic),h("span",{style:{fontSize:"11px",fontWeight:"800",color:"#fff",letterSpacing:"1px"}},cat.l),h("span",{style:{fontSize:"9px",color:"#555",marginLeft:"auto"}},"POR JUEGO")));
+    sorted.forEach((p,i)=>{const t=gt(p.tm);sec.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.02)",cursor:"pointer"},onClick:()=>{state.teamPage=p.tm;state.tab="team";render()}},
+      h("span",{style:{fontSize:"14px",fontWeight:"900",color:i===0?cat.c:"#555",width:"20px"}},String(i+1)),badge(p.tm,20),
+      h("div",{style:{flex:"1"}},h("div",{style:{fontSize:"12px",color:"#ddd",fontWeight:"600"}},p.nm),h("div",{style:{fontSize:"9px",color:"#555"}},t.name+" · #"+p.num+" · "+p.gp+"J")),
+      h("span",{style:{fontSize:"18px",fontWeight:"900",color:cat.c}},(p[cat.k]/p.gp).toFixed(1))))});
+    el.appendChild(sec);});
+  return el;
+}
+
+function renderHistory(){
+  const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"12px"}});
+  el.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"900",color:GD,letterSpacing:"2px"}},"🏆 LA MEMORIA"));
+  // Champions
+  const champ=h("div",{className:"card"});champ.appendChild(h("div",{style:{padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,.06)"}},h("span",{style:{fontSize:"11px",fontWeight:"800",color:"#fff",letterSpacing:"1px"}},"LSB (1993–2023)")));
+  const list=h("div",{style:{maxHeight:"300px",overflowY:"auto"}});
+  LSB.forEach(c=>list.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.02)"}},h("span",{style:{fontSize:"12px",fontWeight:"900",color:GD,width:"36px"}},c.y),h("span",{style:{fontSize:"12px",color:"#ddd",fontWeight:"600"}},c.ch))));
+  champ.appendChild(list);el.appendChild(champ);
+  // Provinces
+  PROV.forEach((p,i)=>el.appendChild(h("div",{className:"card card-p",style:{display:"flex",alignItems:"center",justifyContent:"space-between"}},
+    h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},h("div",{style:{width:"32px",height:"32px",borderRadius:"8px",background:p.c,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:"900",color:"#fff"}},String(i+1)),h("div",{style:{fontSize:"13px",fontWeight:"700",color:"#fff"}},p.n)),
+    h("div",{style:{textAlign:"right"}},h("div",{style:{fontSize:"22px",fontWeight:"900",color:p.t>0?GD:"#333"}},String(p.t)),h("div",{style:{fontSize:"8px",color:"#555",letterSpacing:"1px"}},"TÍTULOS")))));
+  return el;
+}
+
+function renderTeam(){
+  const t=gt(state.teamPage),tg=state.games.filter(g=>g.home===state.teamPage||g.away===state.teamPage);
+  const w=tg.filter(g=>(g.home===state.teamPage&&g.hs>g.as)||(g.away===state.teamPage&&g.as>g.hs)).length,l=tg.length-w;
+  const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"12px"}});
+  el.appendChild(h("button",{className:"btn btn-ghost",style:{textAlign:"left",padding:"4px 0",background:"none",border:"none"},onClick:()=>{state.teamPage=null;state.tab="scores";render()}},"← VOLVER"));
+  // Header
+  const streak=tg.slice(0,5).map(g=>(g.home===state.teamPage&&g.hs>g.as)||(g.away===state.teamPage&&g.as>g.hs));
+  const header=h("div",{className:"card card-p",style:{background:`linear-gradient(135deg,${t.c}22,#1A1917)`,borderColor:`${t.c}44`}},
+    h("div",{style:{display:"flex",alignItems:"center",gap:"12px"}},badge(state.teamPage,48),
+      h("div",{style:{flex:"1"}},h("div",{style:{fontSize:"22px",fontWeight:"900",color:"#fff"}},t.name),h("div",{style:{fontSize:"12px",color:"#888"}},t.zone),
+        streak.length?h("div",{style:{display:"flex",gap:"3px",marginTop:"4px"}},...streak.map(w2=>h("div",{style:{width:"14px",height:"14px",borderRadius:"4px",background:w2?GN:"#ff3b30",fontSize:"8px",fontWeight:"900",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}},w2?"V":"D"))):null),
+      h("div",{style:{textAlign:"center"}},h("div",{style:{fontSize:"28px",fontWeight:"900",color:GN}},w+h("span",{style:{color:"#555"}},"-").outerHTML+h("span",{style:{color:"#ff6b6b"}},l).outerHTML),h("div",{style:{fontSize:"8px",color:"#555",letterSpacing:"1px"}},"RÉCORD"))));
+  // Fix innerHTML for record
+  const recDiv=h("div",{style:{textAlign:"center"}});recDiv.innerHTML=`<div style="font-size:28px;font-weight:900"><span style="color:${GN}">${w}</span><span style="color:#555">-</span><span style="color:#ff6b6b">${l}</span></div><div style="font-size:8px;color:#555;letter-spacing:1px">RÉCORD</div>`;
+  header.querySelector("div > div:last-child")?.replaceWith(recDiv);
+  el.appendChild(header);
+  // Recent games
+  if(tg.length){const recent=h("div",{className:"card"});recent.appendChild(h("div",{style:{padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,.06)"}},h("span",{style:{fontSize:"11px",fontWeight:"800",color:"#fff",letterSpacing:"1px"}},"ÚLTIMOS JUEGOS")));
+    tg.slice(0,8).forEach(g=>{const isH=g.home===state.teamPage,opp=isH?g.away:g.home,o=gt(opp),won=(isH&&g.hs>g.as)||(!isH&&g.as>g.hs);
+      recent.appendChild(h("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 16px",borderBottom:"1px solid rgba(255,255,255,.02)"}},
+        h("span",{style:{fontSize:"10px",fontWeight:"800",color:won?GN:"#ff6b6b",width:"14px"}},won?"V":"D"),badge(opp,18),
+        h("span",{style:{fontSize:"11px",color:"#ccc",flex:"1"}},(isH?"vs":"@")+" "+o.name),
+        h("span",{style:{fontSize:"12px",fontWeight:"900",color:"#fff"}},String(isH?g.hs:g.as)+"-"+String(isH?g.as:g.hs)),
+        h("span",{style:{fontSize:"9px",color:"#555"}},g.dt)))});
+    el.appendChild(recent);}
+  return el;
+}
+
+function render(){
+  const app=document.getElementById("app");app.innerHTML="";
+  // Offline banner
+  if(state.offline)app.appendChild(h("div",{className:"offline-bar"},"📡 SIN CONEXIÓN — MODO OFFLINE"));
+  // Header
+  const header=h("div",{style:{padding:"16px 16px 0",maxWidth:"800px",margin:"0 auto"}},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer"},onClick:()=>{state.tab="scores";state.teamPage=null;render()}},
+        h("div",{style:{width:"36px",height:"36px",borderRadius:"10px",background:`linear-gradient(135deg,${AC},${GD})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}},"🏀"),
+        h("div",null,h("div",{style:{fontSize:"16px",fontWeight:"900",letterSpacing:"3px"}},"TABLONCILLO"),h("div",{style:{fontSize:"8px",letterSpacing:"2px",color:"#666",fontWeight:"600"}},"BALONCESTO HABANERO · LA HABANA"))),
+      !state.isAdmin?h("button",{className:"btn btn-ghost",style:{fontSize:"9px",letterSpacing:"1px"},onClick:()=>{const p=prompt("PIN de reportero:");if(p===PIN){state.isAdmin=true;state.tab="admin";render()}}},"🔑"):h("div",{style:{padding:"4px 8px",background:`${AC}22`,borderRadius:"8px",border:`1px solid ${AC}33`}},h("span",{style:{fontSize:"8px",fontWeight:"700",color:AC,letterSpacing:"1px"}},"REPORTERO"))));
+  app.appendChild(header);
+  // Content
+  const content=h("div",{style:{padding:"0 16px 90px",maxWidth:"800px",margin:"0 auto"}});
+  if(state.tab==="scores")content.appendChild(renderScores());
+  else if(state.tab==="standings")content.appendChild(renderStandings());
+  else if(state.tab==="leaders")content.appendChild(renderLeaders());
+  else if(state.tab==="history")content.appendChild(renderHistory());
+  else if(state.tab==="team"&&state.teamPage)content.appendChild(renderTeam());
+  else if(state.tab==="admin")content.appendChild(renderAdmin());
+  app.appendChild(content);
+  // Bottom nav
+  const tabs=[{k:"scores",i:"🏀",l:"JUEGOS"},{k:"standings",i:"📊",l:"TABLA"},{k:"leaders",i:"📈",l:"LÍDERES"},{k:"history",i:"🏆",l:"ARCHIVO"}];
+  if(state.isAdmin)tabs.push({k:"admin",i:"📋",l:"REPORTAR"});
+  const nav=h("div",{style:{position:"fixed",bottom:"0",left:"0",right:"0",background:`linear-gradient(180deg,transparent,#0F0E0C 25%)`,paddingTop:"20px"}},
+    h("div",{style:{display:"flex",maxWidth:"800px",margin:"0 auto",padding:"0 8px 12px"}},...tabs.map(tb=>
+      h("button",{style:{flex:"1",display:"flex",flexDirection:"column",alignItems:"center",gap:"2px",padding:"8px 0",background:"none",border:"none",cursor:"pointer"},onClick:()=>{state.tab=tb.k;if(tb.k!=="team")state.teamPage=null;render()}},
+        h("span",{style:{fontSize:"18px",filter:state.tab===tb.k?"none":"grayscale(1) brightness(0.4)"}},tb.i),
+        h("span",{style:{fontSize:"7px",fontWeight:"800",letterSpacing:"1px",color:state.tab===tb.k?"#fff":"#444"}},tb.l),
+        state.tab===tb.k?h("div",{className:"tab-dot"}):null))));
+  app.appendChild(nav);
+}
+
+function renderAdmin(){
+  const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"10px"}});
+  el.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"900",color:AC,letterSpacing:"2px"}},"📋 REPORTAR JUEGO"));
+  el.innerHTML+=`
+  <div id="admin-form">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><div style="font-size:9px;color:#888;font-weight:700;margin-bottom:4px;letter-spacing:1px">VISITANTE</div>
+        <select id="adm-away" class="inp"><option value="">—</option>${TEAMS.map(t=>`<option value="${t.id}">${t.name} — ${t.zone}</option>`).join("")}</select></div>
+      <div><div style="font-size:9px;color:#888;font-weight:700;margin-bottom:4px;letter-spacing:1px">LOCAL</div>
+        <select id="adm-home" class="inp"><option value="">—</option>${TEAMS.map(t=>`<option value="${t.id}">${t.name} — ${t.zone}</option>`).join("")}</select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div><div style="font-size:9px;color:#888;font-weight:700;margin-bottom:4px;letter-spacing:1px">FECHA</div>
+        <input type="date" id="adm-dt" class="inp" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div><div style="font-size:9px;color:#888;font-weight:700;margin-bottom:4px;letter-spacing:1px">LUGAR</div>
+        <input id="adm-loc" class="inp" placeholder="Sala Ramón Fonst"></div>
+    </div>
+    <div id="adm-players" style="margin-top:10px"></div>
+    <div id="adm-score" style="margin-top:8px"></div>
+  </div>`;
+  setTimeout(()=>{
+    const setupPlayers=()=>{
+      const home=document.getElementById("adm-home")?.value;const away=document.getElementById("adm-away")?.value;
+      const container=document.getElementById("adm-players");if(!container||!home||!away){if(container)container.innerHTML="";return}
+      if(!window._admPlayers)window._admPlayers={};
+      if(!window._admPlayers[away])window._admPlayers[away]=[];if(!window._admPlayers[home])window._admPlayers[home]=[];
+      container.innerHTML="";
+      [away,home].forEach(tm=>{
+        const t=gt(tm);const ps=window._admPlayers[tm];
+        const sec=document.createElement("div");sec.className="card card-p";sec.style.marginBottom="8px";
+        const hdr=document.createElement("div");hdr.style.cssText="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px";
+        hdr.innerHTML=`<div style="display:flex;align-items:center;gap:6px"><div style="width:20px;height:20px;border-radius:6px;background:${t.c};display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:900;color:${t.a}">${tm}</div><span style="font-size:12px;font-weight:800;color:#fff">${t.name}</span></div><span id="total-${tm}" style="font-size:14px;font-weight:900;color:${AC}">0</span>`;
+        sec.appendChild(hdr);
+        ps.forEach((p,i)=>{
+          const row=document.createElement("div");row.style.cssText="display:flex;gap:3px;margin-bottom:3px;align-items:center;flex-wrap:wrap";
+          row.innerHTML=`<input class="inp sm-inp" style="width:28px" placeholder="#" value="${p.num}" data-tm="${tm}" data-i="${i}" data-f="num">
+            <input class="inp" style="flex:1;min-width:80px" placeholder="Nombre" value="${p.nm}" data-tm="${tm}" data-i="${i}" data-f="nm">
+            ${[["min","MIN"],["pts","PTS"],["reb","REB"],["ast","AST"],["stl","ROB"],["blk","BLQ"],["fgm","TCA"],["fga","TCI"]].map(([k,l])=>`<div style="text-align:center"><div style="font-size:6px;color:#555;font-weight:700">${l}</div><input class="inp sm-inp" value="${p[k]||""}" data-tm="${tm}" data-i="${i}" data-f="${k}"></div>`).join("")}
+            <button style="background:none;border:none;color:#ff3b30;cursor:pointer;font-size:13px;padding:0 3px" data-rm="${tm}" data-ri="${i}">✕</button>`;
+          sec.appendChild(row);
+        });
+        const addBtn=document.createElement("button");addBtn.className="btn btn-ghost";addBtn.style.cssText="width:100%;margin-top:4px;text-align:center;font-size:10px";addBtn.textContent="+ JUGADOR";addBtn.onclick=()=>{window._admPlayers[tm].push({nm:"",num:"",min:0,pts:0,reb:0,ast:0,stl:0,blk:0,fgm:0,fga:0,tm});setupPlayers()};
+        sec.appendChild(addBtn);container.appendChild(sec);
+      });
+      // Event delegation for inputs
+      container.querySelectorAll("input[data-f]").forEach(inp=>{inp.addEventListener("input",e=>{
+        const{tm,i,f:field}=e.target.dataset;const idx=parseInt(i);
+        if(["nm","num"].includes(field))window._admPlayers[tm][idx][field]=e.target.value;
+        else window._admPlayers[tm][idx][field]=parseInt(e.target.value)||0;
+        // Update totals
+        [away,home].forEach(t2=>{const el=document.getElementById("total-"+t2);if(el)el.textContent=window._admPlayers[t2].reduce((s,p)=>s+p.pts,0)});
+        updateScorePreview();
+      })});
+      container.querySelectorAll("button[data-rm]").forEach(btn=>{btn.onclick=()=>{const{rm,ri}=btn.dataset;window._admPlayers[rm].splice(parseInt(ri),1);setupPlayers()}});
+      updateScorePreview();
+    };
+    const updateScorePreview=()=>{
+      const home=document.getElementById("adm-home")?.value;const away=document.getElementById("adm-away")?.value;
+      const scoreEl=document.getElementById("adm-score");if(!scoreEl||!home||!away||!window._admPlayers)return;
+      const hs=window._admPlayers[home]?.reduce((s,p)=>s+p.pts,0)||0;const as=window._admPlayers[away]?.reduce((s,p)=>s+p.pts,0)||0;
+      scoreEl.innerHTML=`<div class="card card-p" style="background:linear-gradient(135deg,#1a1917,#252320);text-align:center">
+        <div style="font-size:10px;color:#888;font-weight:700;letter-spacing:2px;margin-bottom:6px">MARCADOR</div>
+        <div style="display:flex;justify-content:center;align-items:center;gap:16px">
+          <div><div style="font-size:10px;color:#999">${gt(away).zone}</div><div style="font-size:28px;font-weight:900;color:${as>hs?"#fff":"#555"}">${as}</div></div>
+          <span style="font-size:16px;color:#333">—</span>
+          <div><div style="font-size:10px;color:#999">${gt(home).zone}</div><div style="font-size:28px;font-weight:900;color:${hs>as?"#fff":"#555"}">${hs}</div></div>
+        </div>
+        <button id="save-game" class="btn btn-accent" style="width:100%;margin-top:12px;padding:10px 0;font-size:13px;letter-spacing:2px">💾 GUARDAR</button>
+      </div>`;
+      document.getElementById("save-game")?.addEventListener("click",()=>{
+        const dt=document.getElementById("adm-dt")?.value;const loc=document.getElementById("adm-loc")?.value;
+        const allPs=[...(window._admPlayers[away]||[]),...(window._admPlayers[home]||[])];
+        if(!allPs.length)return;
+        const game={id:"game_"+Date.now(),home,away,hs,as,dt,loc,ps:allPs,createdAt:Date.now()};
+        DB.set(game.id,game);state.games.unshift(game);
+        window._admPlayers=null;state.tab="scores";render();
+      });
+    };
+    document.getElementById("adm-home")?.addEventListener("change",()=>{window._admPlayers=null;setupPlayers()});
+    document.getElementById("adm-away")?.addEventListener("change",()=>{window._admPlayers=null;setupPlayers()});
+  },50);
+  return el;
+}
+
+// Events
+window.addEventListener("online",()=>{state.offline=false;render()});
+window.addEventListener("offline",()=>{state.offline=true;render()});
+
+// PWA Install prompt
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e});
+
+// Boot
+init();
+</script>
+</body>
+</html>
