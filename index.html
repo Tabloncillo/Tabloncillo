@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tabloncillo">
 <meta name="description" content="Baloncesto Cubano — Liga de La Habana en tu bolsillo">
-<title>Tabloncillo V22 — Baloncesto Cubano</title>
+<title>Tabloncillo — Baloncesto Cubano</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiVGFibG9uY2lsbG8iLCJzaG9ydF9uYW1lIjoiVGFibG9uY2lsbG8iLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBCMTgyOSIsInRoZW1lX2NvbG9yIjoiIzBCMTgyOSIsImljb25zIjpbXX0=">
 <style>
@@ -21,6 +21,9 @@ button{font-family:'Barlow Condensed',-apple-system,sans-serif}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.fi{animation:fadeIn .2s ease}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}.pulse{animation:pulse 1.2s infinite}
 </style>
+<!-- GoatCounter Analytics — Change "tabloncillo" to your GoatCounter subdomain -->
+<!-- Sign up free: https://goatcounter.com -->
+<script data-goatcounter="https://tabloncillo.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 <!-- Loading Screen -->
@@ -88,8 +91,14 @@ const IS=`background:#0B1829;border:1px solid ${BD};border-radius:8px;padding:8p
 
 function init(){
   T.forEach(t=>{const saved=DB.get("team_"+t.id);if(saved){if(saved.name)t.name=saved.name;if(saved.zone)t.zone=saved.zone;if(saved.roster)t.roster=saved.roster}});
-  S.games=DB.all("game_").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));S.sched=DB.all("sched_");if(!S.games.length)seed();render();
-  // Dismiss loading screen
+  S.games=DB.all("game_").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));S.sched=DB.all("sched_");if(!S.games.length)seed();
+  // Track visits locally
+  const today=new Date().toISOString().split("T")[0];
+  const visits=DB.get("analytics")||{total:0,daily:{},first:today,sessions:[]};
+  visits.total++;visits.daily[today]=(visits.daily[today]||0)+1;
+  if(!visits.sessions.includes(today))visits.sessions.push(today);
+  visits.last=today;DB.set("analytics",visits);
+  render();
   setTimeout(()=>{const ld=document.getElementById("loader");if(ld){ld.style.opacity="0";setTimeout(()=>ld.remove(),400)}},600)
 }
 
@@ -891,6 +900,37 @@ function rAdminBracket(){
 // ─── ADMIN: TOOLS ───────────────────────────────────────
 function rAdminTools(){
   const el=h("div",{style:{display:"flex",flexDirection:"column",gap:"10px"}});
+  // ── ANALYTICS DASHBOARD ──
+  const visits=DB.get("analytics")||{total:0,daily:{},first:null,sessions:[],last:null};
+  const today=new Date().toISOString().split("T")[0];
+  const todayCount=visits.daily[today]||0;
+  const uniqueDays=visits.sessions?.length||0;
+  const totalUsers=DB.all("user_").length;
+  // Last 7 days
+  const last7=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.toISOString().split("T")[0];last7.push({dt:k,day:d.toLocaleDateString("es",{weekday:"short"}).slice(0,2),count:visits.daily[k]||0})}
+  const maxDay=Math.max(...last7.map(d=>d.count),1);
+  const anEl=h("div",{style:{background:`linear-gradient(135deg,${GD}08,${SF})`,border:`1px solid ${GD}33`,borderRadius:"4px",padding:"14px 16px"}});
+  anEl.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:GD,letterSpacing:"2px",marginBottom:"10px",fontFamily:"'Oswald',sans-serif"}},"ANALYTICS"));
+  // Stats row
+  anEl.appendChild(h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"6px",marginBottom:"12px"}},
+    ...[["HOY",todayCount,AC],["TOTAL",visits.total,"#E8DFD0"],["DÍAS",uniqueDays,GD],["PERFILES",totalUsers,GN]].map(([l,v,c])=>
+      h("div",{style:{textAlign:"center",background:"#0B182980",borderRadius:"4px",padding:"8px 4px"}},
+        h("div",{style:{fontSize:"18px",fontWeight:"700",color:c,fontFamily:"'Oswald',sans-serif"}},String(v)),
+        h("div",{style:{fontSize:"7px",color:"#3A5068",letterSpacing:"1px"}},l)))));
+  // Bar chart — last 7 days
+  anEl.appendChild(h("div",{style:{fontSize:"9px",color:"#3A5068",marginBottom:"6px",fontFamily:"'Oswald',sans-serif",letterSpacing:"1px"}},"ÚLTIMOS 7 DÍAS"));
+  const chart=h("div",{style:{display:"flex",alignItems:"flex-end",gap:"4px",height:"50px"}});
+  last7.forEach(d=>{const pct=d.count/maxDay*100;
+    chart.appendChild(h("div",{style:{flex:"1",display:"flex",flexDirection:"column",alignItems:"center",gap:"2px"}},
+      h("div",{style:{fontSize:"8px",color:d.count?"#E8DFD0":"#2E4560",fontWeight:"700"}},d.count||""),
+      h("div",{style:{width:"100%",height:Math.max(pct,4)+"%",background:d.dt===today?AC:GD+"66",borderRadius:"2px 2px 0 0",minHeight:"2px"}}),
+      h("div",{style:{fontSize:"7px",color:"#3A5068",marginTop:"2px"}},d.day)))});
+  anEl.appendChild(chart);
+  // GoatCounter link
+  anEl.appendChild(h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:"10px",paddingTop:"8px",borderTop:"1px solid "+BD}},
+    h("div",{style:{fontSize:"9px",color:"#3A5068"}},"Tracking local "+(visits.first?"desde "+visits.first:"")),
+    h("a",{href:"https://tabloncillo.goatcounter.com",target:"_blank",style:{fontSize:"9px",color:GD,textDecoration:"none",fontWeight:"700"}},"Ver GoatCounter →")));
+  el.appendChild(anEl);
   // Calculate storage usage
   let totalSize=0;let logoCount=0;let picCount=0;
   for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);const v=localStorage.getItem(k);totalSize+=k.length+v.length;
@@ -930,7 +970,7 @@ function rAdminTools(){
     // FULL EXPORT — everything
     document.getElementById("fullexp")?.addEventListener("click",()=>{
       const bundle={v:"v21",exportDate:new Date().toISOString(),games:S.games,schedule:S.sched,
-        playoffs:DB.get("playoffs"),teams:{},logos:{},photos:{},sponsors:{},seasons:[],allstar:DB.get("allstar_votes")};
+        playoffs:DB.get("playoffs"),teams:{},logos:{},photos:{},sponsors:{},seasons:[],allstar:DB.get("allstar_votes"),analytics:DB.get("analytics")};
       // Collect team customizations
       T.forEach(t=>{const saved=DB.get("team_"+t.id);if(saved)bundle.teams[t.id]=saved});
       // Collect logos
@@ -988,6 +1028,7 @@ function rAdminTools(){
         if(d.users){d.users.forEach(u=>{if(u.id)DB.set(u.id,u)})}
         // Import allstar
         if(d.allstar)DB.set("allstar_votes",d.allstar);
+        if(d.analytics){const cur=DB.get("analytics")||{total:0,daily:{},sessions:[]};cur.total+=d.analytics.total||0;Object.entries(d.analytics.daily||{}).forEach(([k,v])=>{cur.daily[k]=(cur.daily[k]||0)+v});DB.set("analytics",cur)}
         // Reload state
         S.games=DB.all("game_").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
         S.sched=DB.all("sched_");
@@ -1006,7 +1047,7 @@ function rAdminTools(){
     document.getElementById("nukebtn")?.addEventListener("click",()=>{
       if(!confirm("⚠️ ¿Estás SEGURO? Esto borrará TODOS los datos de Tabloncillo."))return;
       if(!confirm("🔴 ÚLTIMA OPORTUNIDAD. Esto es irreversible. ¿Continuar?"))return;
-      const prefixes=["game_","sched_","team_","logo_","pic_","playoffs","season_","user_","my_profile","allstar_"];
+      const prefixes=["game_","sched_","team_","logo_","pic_","playoffs","season_","user_","my_profile","allstar_","sponsor_","analytics","pick_","ios_hint"];
       for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(prefixes.some(p=>k.startsWith(p)))localStorage.removeItem(k)}
       location.reload()});
   },50);
