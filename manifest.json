@@ -1,0 +1,24 @@
+{
+  "name": "Tabloncillo — Baloncesto Cubano",
+  "short_name": "Tabloncillo",
+  "description": "Liga de Baloncesto de La Habana en tu bolsillo",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0B1829",
+  "theme_color": "#0B1829",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
